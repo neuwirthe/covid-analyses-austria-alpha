@@ -1,0 +1,127 @@
+---
+title: "Get Impfdaten"
+author: "Erich Neuwirth"
+date: "7/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+ library(tidyverse) 
+})
+```
+
+```{r}
+vac_url <- 
+  "https://info.gesundheitsministerium.at/data"
+```
+
+```{r}
+local_vac_dir <-
+  file.path(here(),"data","downloaded")
+```
+```{r}
+files_to_download <-
+  c("timeline-bbg.csv",
+    "timeline-eimpfpass.csv",
+    "timeline-bundeslaendermeldungen.csv")
+```
+
+
+```{r}
+for (f in files_to_download){
+  download.file(file.path(vac_url,f),
+                file.path(local_vac_dir,f),
+                quiet=TRUE)
+}
+```
+
+
+```{r}
+suppressMessages(
+  read_csv2(file.path(local_vac_dir,"timeline-bbg.csv"))
+  ) |>
+  mutate(Datum=as.Date(Datum)) |>
+  rename(pop_VAC=Bevölkerung) |>
+  rename(Bundesland=Name) |>
+  select(-ends_with("Pro100")) |>
+  mutate(Geliefert=Auslieferungen) |>
+  mutate(Bestellt=Bestellungen) ->
+  vac_bbg
+```
+
+```{r}
+save(vac_bbg,
+     file=file.path(here(),"data","rdata_preliminary",
+                    "vac_bund.RData"))
+```
+
+```{r}
+suppressMessages(
+  read_csv2(file.path(local_vac_dir,"timeline-eimpfpass.csv"))
+  ) |>
+  mutate(Datum=as.Date(Datum)) |>
+  rename(pop_VAC=Bevölkerung) |>
+  rename(Bundesland=Name) |>
+  select(-ends_with("Pro100")) |>
+  rename(Impfungen=EingetrageneImpfungen) |>
+  rename(Teilgeimpft=Teilgeimpfte) |>
+  rename(Vollimmunisiert=Vollimmunisierte) |>
+  rename(AstraZeneca_1=EingetrageneImpfungenAstraZeneca_1) |>
+  rename(AstraZeneca_2=EingetrageneImpfungenAstraZeneca_2) |>
+  rename(Pfizer_1=EingetrageneImpfungenBioNTechPfizer_1) |>
+  rename(Pfizer_2=EingetrageneImpfungenBioNTechPfizer_2) |>
+  rename(Moderna_1=EingetrageneImpfungenModerna_1) |>
+  rename(Moderna_2=EingetrageneImpfungenModerna_2) |>
+  rename(Janssen=EingetrageneImpfungenJanssen) |>
+  rename(Unbekannt_1=ImpfstoffNichtZugeordnet_1) |>
+  rename(Unbekannt_2=ImpfstoffNichtZugeordnet_2) ->
+  vac_alter_temp
+```
+
+```{r}
+vac_alter_temp |> 
+  select(-starts_with("Gruppe")) ->
+  vac_types
+```
+
+```{r}
+save(vac_types,
+     file=file.path(here(),"data","rdata_preliminary",
+                    "vac_types.RData"))
+```
+
+
+```{r}
+vac_alter_temp |> 
+  select(Datum,BundeslandID,Bundesland,starts_with("Gruppe")) |>
+  pivot_longer(cols=starts_with("Gruppe"),
+               names_to="Gruppe",
+               values_to="Anzahl") |>
+  mutate(Gruppe=str_remove(Gruppe,"Gruppe_")) |>
+  mutate(Impfung=str_sub(Gruppe,-1,-1)) |>
+  mutate(Geschlecht=str_sub(Gruppe,-3,-3)) |>
+  mutate(Alter=str_remove(Gruppe,paste0("_",Geschlecht,"_",Impfung))) |>
+  mutate(Alter = case_when(
+    Alter == "<15" ~ "12-14",
+    Alter == ">84" ~ "85-",
+    Alter == "NichtZuordenbar" ~ "Unbekannt",
+    TRUE ~ Alter
+  )) |>
+  select(-Gruppe) |>
+  mutate(Bundesland=ifelse(BundeslandID==0,"Unbekannt","Bundesland")) |>
+  select(Datum,Bundesland,BundeslandID,Alter,Geschlecht,Impfung,Anzahl) ->
+  vac_alter
+```
+
+
+```{r}
+save(vac_alter,
+     file=file.path(here(),"data","rdata_preliminary",
+                    "vac_alter.RData"))
+```
+

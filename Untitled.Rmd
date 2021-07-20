@@ -1,0 +1,121 @@
+---
+title: "Get AGES cases Altersgruppen"
+author: "Erich Neuwirth"
+date: "7/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+  library(here)
+  library(tidyverse)
+  library(fs)
+  library(purrr)
+})
+```
+
+
+```{r ems03}
+suppressMessages(
+source(file.path(here(),"utils",
+            "purl_and_source.R"))
+)
+```
+
+
+```{r ems04}
+suppressMessages(
+purl_and_source(file.path(here(),"utils",
+            "utils.Rmd"))
+)
+```
+
+```{r}
+coronaDAT_url <- "https://github.com/statistikat/coronaDAT"
+```
+
+
+```{r}
+if (!dir_exists(file.path(here(),"data","downloaded",
+                          "coronaDAT"))){
+  setwd(file.path(here(),"data","downloaded"))
+    system("git clone https://github.com/statistikat/coronaDAT")
+  } else {
+    setwd(file.path(here(),"data","downloaded","coronaDAT"))
+    system("git pull")                        
+  }
+setwd(here())
+```
+```{r}
+coronaDAT_dir <- file.path(here(),"data","downloaded",
+                           "coronaDAT","archive")
+  
+```
+
+```{r alter4}
+dir_ls(coronaDAT_dir) ->
+  alter_dirs
+```
+
+
+```{r alter6, warning=FALSE}
+dates <- c()
+suppressWarnings({
+for (d in alter_dirs) {
+  zip_file <-
+   dir_ls(file.path(d,"data")) 
+  
+
+  if (str_detect(zip_file,"_orig_csv_ages.zip$")){
+    str_split(zip_file,"/") |>  unlist() |> (\(x)x[10])() ->
+      file_date
+    dates <- c(dates,file_date)
+  }
+}
+  dates |> keep(\(x)!str_detect(x,"[[:letter:]]")) |>
+  keep(~as.numeric(.) > 20210500) ->
+  date_strings_to_use
+})
+```
+
+
+```{r alter7}
+altersgruppen_since_may <- tibble()
+for (dir_mid in date_strings_to_use) {
+  d <- paste(coronaDAT_dir,dir_mid,"data",sep="/")
+  file_to_unzip <- dir_ls(d)
+  Datum <- paste(str_sub(dir_mid,1,4),
+                 str_sub(dir_mid,5,6),
+                 str_sub(dir_mid,7,8),
+                 sep="-") |> as.Date()
+  unzip(file_to_unzip,
+        files="CovidFaelle_Altersgruppe.csv",
+        exdir=file.path(here(),"unzipped"))
+
+  one_day_df <-
+suppressMessages(      
+
+    read_csv2(file.path(
+      file.path(here(),"unzipped",
+               "CovidFaelle_Altersgruppe.csv")
+      )
+    )) |>
+    mutate(Datum=Datum) |>
+    select(Datum,everything())
+  altersgruppen_since_may |>
+    bind_rows(one_day_df) ->
+    altersgruppen_since_may
+}
+altersgruppen_since_may |>
+    mutate(Altersgruppe=case_when(
+    Altersgruppe == "<5" ~ "0-4",
+    Altersgruppe == ">84" ~ "85-",
+    TRUE ~ Altersgruppe)
+    ) ->
+  altersgruppen_since_may
+```
+

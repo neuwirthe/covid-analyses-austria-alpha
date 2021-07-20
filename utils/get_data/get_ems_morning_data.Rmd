@@ -1,0 +1,121 @@
+---
+title: "Get EMS morning data"
+author: "Erich Neuwirth"
+date: "7/16/2021"
+output: html_document
+---
+
+```{r}
+keep_download_data <- FALSE
+```
+
+
+```{r ems01, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r ems02}
+suppressMessages(library(here))
+```
+
+```{r ems03}
+suppressMessages(
+source(file.path(here(),"utils",
+            "purl_and_source.R"))
+)
+```
+
+
+```{r ems04}
+suppressMessages(
+purl_and_source(file.path(here(),"utils",
+            "utils.Rmd"))
+)
+```
+
+
+
+
+```{r ems05}
+ems_morning_download_dir <-
+  "https://info.gesundheitsministerium.at/data/"
+local_download_data_dir <- file.path(
+  file.path(here(),"data","downloaded")
+)
+```
+
+```{r ems06}
+create_dir_if_needed(local_download_data_dir)
+```
+
+```{r ems07}
+ems_file_to_download <- 
+  "timeline-faelle-ems.csv"
+```
+
+```{r ems08}
+download.file(
+    file.path(ems_morning_download_dir,ems_file_to_download),
+    file.path(local_download_data_dir,ems_file_to_download),
+    quiet=TRUE
+)
+```
+
+```{r ems09}
+suppressMessages(
+read_csv2(file.path(local_download_data_dir,
+                    ems_file_to_download)) |>
+  mutate(Datum=as.Date(Datum)) |>
+  rename(cases_EMS=BestaetigteFaelleEMS) |>
+  rename(Bundesland=Name) ->
+  cases_ems_since_20210301
+)
+```
+
+```{r ems10}
+load(path(here(),"data_base",
+          "ems_bmi_ages_upto_20210228.RData"))
+```
+
+```{r ems11}
+bind_rows(
+  ems_bmi_ages_upto_20210228 |> 
+    select(Datum,BundeslandID,Bundesland,cases_EMS),
+  cases_ems_since_20210301
+) ->
+  cases_ems
+```
+
+```{r wms12}
+load(path(here(),"data_base",
+          "pop_bl_quarterly.RData")) 
+pop_bl_quarterly |>
+  filter(Datum==max(Datum)) |>
+  select(BundeslandID,Bundesland,pop) ->
+  pop_bl_latest
+```
+
+```{r ems13}
+cases_ems |>
+  left_join(pop_bl_latest) ->
+  cases_ems
+```
+```{r ems14}
+create_dir_if_needed(path(here(),"data","rdata_preliminary"))
+```
+
+
+```{r ems15}
+save(cases_ems,
+     file=path(here(),"data","rdata_preliminary",
+               "cases_ems.RData"))
+```
+
+```{r}
+if(!keep_download_data){
+  file_delete(file.path(local_download_data_dir,
+                        ems_file_to_download)
+)
+}
+```
+
