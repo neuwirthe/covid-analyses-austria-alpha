@@ -165,6 +165,23 @@ bind_rows(
 cases_ages_alter
 ```
 
+
+```{r}
+cases_ages_alter |>
+  pull(Datum) |>
+  unique() |>
+  sort() ->
+  dates_available
+dates_all <-
+  seq(min(dates_available),max(dates_available),by="1 day")
+dates_missing <-
+  setdiff(dates_all,dates_available)
+# dates_missing 
+```
+
+
+
+
 ```{r}
 create_dir_if_needed(file.path(here(), 
                                "data", "rdata_preliminary"))
