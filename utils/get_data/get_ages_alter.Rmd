@@ -14,20 +14,12 @@ knitr::opts_chunk$set(echo = TRUE)
 keep_download_data <- FALSE
 ```
 
-```{r}
-suppressPackageStartupMessages({
-  library(here)
-  library(tidyverse)
-  library(fs)
-  library(purrr)
-})
-```
 
 
 ```{r ems03}
 suppressMessages(
-  source(file.path(
-    here(), "utils",
+  source(fs::path(
+    here::here(), "utils",
     "purl_and_source.R"
   ))
 )
@@ -36,8 +28,8 @@ suppressMessages(
 
 ```{r ems04}
 suppressMessages(
-  purl_and_source(file.path(
-    here(), "utils",
+  purl_and_source(fs::path(
+    here::here(), "utils",
     "utils.Rmd"
   ))
 )
@@ -49,21 +41,21 @@ coronaDAT_url <- "https://github.com/statistikat/coronaDAT"
 
 
 ```{r}
-if (!dir_exists(file.path(
-  here(), "data", "downloaded",
+if (!dir_exists(path(
+  local_download_data_dir,
   "coronaDAT"
 ))) {
-  setwd(file.path(here(), "data", "downloaded"))
+  setwd(local_download_data_dir)
   system("git clone https://github.com/statistikat/coronaDAT")
 } else {
-  setwd(file.path(here(), "data", "downloaded", "coronaDAT"))
+  setwd(path(local_download_data_dir, "coronaDAT"))
   system("git pull")
 }
 setwd(here())
 ```
 ```{r}
-coronaDAT_dir <- file.path(
-  here(), "data", "downloaded",
+coronaDAT_dir <- path(
+  local_download_data_dir,
   "coronaDAT", "archive"
 )
 ```
@@ -79,7 +71,7 @@ dates <- c()
 suppressWarnings({
   for (d in alter_dirs) {
     zip_file <-
-      dir_ls(file.path(d, "data"))
+      dir_ls(path(d, "data"))
 
 
     if (str_detect(zip_file, "_orig_csv_ages.zip$")) {
@@ -111,7 +103,7 @@ for (dir_mid in date_strings_to_use) {
   if ((file_to_unzip |> length()) > 1) {
     file_to_unzip <- (file_to_unzip |> first())
   }
-  ex_dir <- file.path(here(), "unzipped")
+  ex_dir <- path(here(), "unzipped")
   if (dir_exists(ex_dir)) {
     dir_delete(ex_dir)
   }
@@ -122,8 +114,8 @@ for (dir_mid in date_strings_to_use) {
 
   one_day_df <-
     suppressMessages(
-      read_csv2(file.path(
-        file.path(
+      read_csv2(path(
+        path(
           here(), "unzipped",
           "CovidFaelle_Altersgruppe.csv"
         )
@@ -147,7 +139,7 @@ altersgruppen_since_may26
 ```
 
 ```{r}
-load(file.path(
+load(path(
   here(), "data_base",
   "altersgruppen_df_upto_20210525.RData"
 ))
@@ -183,14 +175,13 @@ dates_missing <-
 
 
 ```{r}
-create_dir_if_needed(file.path(here(), 
-                               "data", "rdata_preliminary"))
+create_dir_if_needed(path(here(),rdata_prelim_dir))
 ```
 
 ```{r}
-save(cases_age_ages,
-  file = file.path(
-    here(), "data", "rdata_preliminary",
+save(cases_ages_alter,
+  file = path(
+    rdata_prelim_dir,
     "cases_ages_alter.RData"
   )
 )

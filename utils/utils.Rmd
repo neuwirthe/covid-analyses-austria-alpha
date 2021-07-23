@@ -9,35 +9,83 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Packages list 
+
+```{r}
+pkg_list <- c(
+  "tidyverse",
+  "magrittr",
+  "fs",
+  "here",
+  "ggiraph",
+  "scales",
+  "gt",
+  "ggmosaic",
+  "htmlwidgets",
+  "cowplot",
+  "clipr",
+  "openxlsx",
+  "readxl"
+)
+```
+
+
+```{r}
+pkgs_inst <- rownames(installed.packages())
+```
+
+```{r}
+for (p in pkg_list){
+  if(!(p %in% pkgs_inst)){
+    install.packages(p)
+  }
+}
+```
 
 ```{r ut02}
 suppressPackageStartupMessages({
-  library(tidyverse)
-  library(magrittr)
-  library(fs)
-  library(here)
-  library(ggiraph)
-  library(scales)
-  library(gt)
-  library(ggmosaic)
-  library(htmlwidgets)
-  library(cowplot)
-  library(clipr)
-  library(openxlsx)
+  for(p in pkg_list){
+    library(p,character.only = TRUE)
+  }
 })
 ```
 
 ## File and dir utilities
 
+```{r}
+local_download_data_dir <-
+  path(here(), "data", "downloaded")
+```
+
+```{r}
+rdata_prelim_dir <-
+  path(here(), "data", "rdata_preliminary")
+```
+
+```{r}
+safe_file_delete <-
+  function(file) {
+    if (file_exists(file)) file_delete(file)
+  }
+```
+
+
+```{r}
+safe_dir_delete <-
+  function(dir) {
+    if (dir_exists(dir)) dir_delete(dir)
+  }
+```
+
 ```{r ut03}
-create_dir_if_needed <- function(dir){
+create_dir_if_needed <- function(dir) {
   if (!dir_exists(dir)) dir_create(dir)
 }
 ```
 
 ```{r ut04}
-file_delete_safe <- function(file_path){
-  if(file_exists(file_path)){
+file_delete_safe <- function(file_path) {
+  if (file_exists(file_path)) {
     file_delete(file_path)
   }
 }
@@ -45,10 +93,9 @@ file_delete_safe <- function(file_path){
 
 
 ```{r ut05}
-dir_delete_safe  <- function(dir_path){
-  if(dir_ls(dir_path) |> length() == 0) {
+dir_delete_safe <- function(dir_path) {
+  if (dir_ls(dir_path) |> length() == 0) {
     dir_delete(dir_path)
   }
 }
 ```
-

@@ -16,94 +16,100 @@ keep_download_data <- FALSE
 ```
 
 ```{r}
-suppressPackageStartupMessages({
-  library(here)
-})
-```
-
-```{r}
 suppressMessages({
-source(file.path(here(),"utils",
-                 "purl_and_source.R"))
-purl_and_source(file.path(here(),"utils",
-                          "utils.Rmd"))
+  source(fs::path(
+    here::here(), "utils",
+    "purl_and_source.R"
+  ))
+  purl_and_source(fs::path(
+    here::here(), "utils",
+    "utils.Rmd"
+  ))
 })
 ```
 
 
 
 ```{r}
-ages_download_zip_file <-
+ages_download_zip_url <-
   "https://covid19-dashboard.ages.at/data/data.zip"
 ```
 
 ```{r}
-local_ages_download_dir <- file.path(
-  file.path(here(),"data","downloaded"))
-local_ages_file <- "ages_data.zip"  
+local_ages_file <- "ages_data.zip"
 ```
 
 ```{r}
-create_dir_if_needed(local_ages_download_dir)
+create_dir_if_needed(local_download_data_dir)
 ```
 
 
 
 ```{r bmi08}
 suppressMessages(
-download.file(ages_download_zip_file,
-  file.path(local_ages_download_dir,local_ages_file)
-)
+  download.file(
+    ages_download_zip_url,
+    path(local_download_data_dir, local_ages_file)
+  )
 )
 ```
 ```{r}
 ages_unzip_dir <-
-  file.path(local_ages_download_dir,"ages_files")
+  path(local_download_data_dir, "ages_files")
 create_dir_if_needed(ages_unzip_dir)
 ```
 
 
 ```{r}
-unzip(file.path(local_ages_download_dir,local_ages_file),
-      exdir = ages_unzip_dir)
+unzip(path(local_download_data_dir, local_ages_file),
+  exdir = ages_unzip_dir
+)
 ```
 
 
 ```{r}
-read_csv2(file.path(ages_unzip_dir,
-                    "CovidFaelle_Timeline.csv")) ->
-  ages_raw
+read_csv2(path(
+  ages_unzip_dir,
+  "CovidFaelle_Timeline.csv"
+)) ->
+ages_raw
 ```
 
 ```{r}
 ages_raw |>
-  select(Time,Bundesland,BundeslandID,AnzEinwohner,
-         ends_with("Sum")) |>
-  mutate(Datum = Time |> 
-           str_sub(1,10) |>
-           as.Date(format="%d.%m.%Y")) |>
+  select(
+    Time, Bundesland, BundeslandID, AnzEinwohner,
+    ends_with("Sum")
+  ) |>
+  mutate(Datum = Time |>
+    str_sub(1, 10) |>
+    as.Date(format = "%d.%m.%Y")) |>
   rename(pop_AGES = AnzEinwohner) |>
   rename(cases_AGES = AnzahlFaelleSum) |>
   rename(Tot_AGES = AnzahlTotSum) |>
   rename(Genesen_AGES = AnzahlGeheiltSum) |>
   select(-Time) |>
-  select(Datum,Bundesland,BundeslandID,everything()) ->
-  ages_cases_data
+  select(Datum, Bundesland, BundeslandID, everything()) ->
+ages_cases_data
 ```
 
 ```{r}
-read_csv2(file.path(ages_unzip_dir,
-                    "CovidFallzahlen.csv")) |>
-  mutate(Datum=as.Date(Meldedat,format="%d.%m.%Y",
-                       tz=Sys.timezone(location=TRUE))) |>
-  rename(Normalbetten_AGES = FZHosp) |> 
+read_csv2(path(
+  ages_unzip_dir,
+  "CovidFallzahlen.csv"
+)) |>
+  mutate(Datum = as.Date(Meldedat,
+    format = "%d.%m.%Y",
+    tz = Sys.timezone(location = TRUE)
+  )) |>
+  rename(Normalbetten_AGES = FZHosp) |>
   rename(Intensiv_AGES = FZICU) |>
-  rename(Normalbetten_frei_AGES = FZHospFree) |> 
+  rename(Normalbetten_frei_AGES = FZHospFree) |>
   rename(Intensiv_frei_AGES = FZICUFree) |>
   rename(TestsAlle_AGES = TestGesamt) |>
   select(-MeldeDatum, -Meldedat) |>
-  select(Datum,Bundesland,BundeslandID,everything()) ->
-  ages_hosp_data
+  select(Datum, Bundesland, BundeslandID, everything()) ->
+ages_hosp_data
 ```
 
 
@@ -111,56 +117,75 @@ read_csv2(file.path(ages_unzip_dir,
 left_join(
   ages_cases_data,
   ages_hosp_data
-) |> 
-  mutate(Datum = Datum + 1)->
-  cases_ages
+) |>
+  mutate(Datum = Datum + 1) ->
+cases_ages
 ```
 
 
 ```{r}
 save(cases_ages,
-     file=file.path(here(),"data","rdata_preliminary",
-                    "cases_ages.RData"))
+  file = path(
+    here(), "data", "rdata_preliminary",
+    "cases_ages.RData"
+  )
+)
 ```
 
 ```{r}
 read_csv2(
-  file.path(local_ages_download_dir,"ages_files",
-            "CovidFaelle_Timeline_GKZ.csv")) |>
-    mutate(Datum=as.Date(Time,format="%d.%m.%Y",
-                       tz=Sys.timezone(location=TRUE))) |>
-  rename(pop_AGES=AnzEinwohner) |>
-  mutate(BundeslandID = floor(GKZ/100)) |>
-  rename(BezirkID=GKZ) |>
-  select(Datum,Bezirk,BezirkID,BundeslandID,pop_AGES,
-         ends_with("Sum")) |>
-  rename(cases_AGES=AnzahlFaelleSum) |>
+  path(
+    local_download_data_dir, "ages_files",
+    "CovidFaelle_Timeline_GKZ.csv"
+  )
+) |>
+  mutate(Datum = as.Date(Time,
+    format = "%d.%m.%Y",
+    tz = Sys.timezone(location = TRUE)
+  )) |>
+  rename(pop_AGES = AnzEinwohner) |>
+  mutate(BundeslandID = floor(GKZ / 100)) |>
+  rename(BezirkID = GKZ) |>
+  select(
+    Datum, Bezirk, BezirkID, BundeslandID, pop_AGES,
+    ends_with("Sum")
+  ) |>
+  rename(cases_AGES = AnzahlFaelleSum) |>
   rename(Tot_AGES = AnzahlTotSum) |>
   rename(Genesen_AGES = AnzahlGeheiltSum) |>
-  mutate(Bezirk = str_replace(Bezirk,
-                                  fixed("(Stadt)"), 
-                                  " (Stadt)")) |>
-  mutate(Bezirk = str_replace(Bezirk,
-                                  fixed("(Land)"), 
-                                  " (Land)")) |>
-  arrange(Datum,BezirkID) |>
-  mutate(Datum=Datum+1) ->
-  cases_ages_bezirk 
-
+  mutate(Bezirk = str_replace(
+    Bezirk,
+    fixed("(Stadt)"),
+    " (Stadt)"
+  )) |>
+  mutate(Bezirk = str_replace(
+    Bezirk,
+    fixed("(Land)"),
+    " (Land)"
+  )) |>
+  arrange(Datum, BezirkID) |>
+  mutate(Datum = Datum + 1) ->
+cases_ages_bezirk
 ```
 
 
 ```{r}
 save(cases_ages_bezirk,
-     file=file.path(here(),"data","rdata_preliminary",
-                    "cases_ages_bezirk.RData"))
+  file = path(
+    here(), "data", "rdata_preliminary",
+    "cases_ages_bezirk.RData"
+  )
+)
 ```
 
 ```{r}
 if (!keep_download_data) {
-  file_delete(
-    file.path(local_ages_download_dir,local_ages_file))
-  dir_delete(file.path(local_ages_download_dir,"ages_files"))
+  safe_file_delete(
+    path(local_download_data_dir, local_ages_file)
+  )
+  safe_dir_delete(path(
+    local_download_data_dir,
+    "ages_files"
+  ))
 }
 ```
-

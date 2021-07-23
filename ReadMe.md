@@ -1,3 +1,7 @@
 # COVID-Analysen für Österreich
 
-Repository des source codes für eine Website
+Repository of source code for web site
+
+The whole project uses blogdown as the basic tool
+
+

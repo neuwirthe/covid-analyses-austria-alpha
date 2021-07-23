@@ -13,38 +13,31 @@ knitr::opts_chunk$set(echo = TRUE)
 keep_download_data <- FALSE
 ```
 
-```{r bmi02}
-suppressMessages(library(here))
-```
-
 ```{r bmi03}
 suppressMessages(
-source(file.path(here(),"utils",
-            "purl_and_source.R"))
+  source(fs::path(
+    here::here(), "utils",
+    "purl_and_source.R"
+  ))
 )
-```
-
-
-```{r bmi04}
 suppressMessages(
-purl_and_source(file.path(here(),"utils",
-            "utils.Rmd"))
+  purl_and_source(fs::path(
+    here::here(), "utils",
+    "utils.Rmd"
+  ))
 )
 ```
 
 
 
 ```{r bmi05}
-bmsgpk_download_dir <-
+bmsgpk_download_url <-
   "https://info.gesundheitsministerium.at/data/"
-local_bmsgpk_data_dir <- file.path(
-  file.path(here(),"data","downloaded")
-)
 ```
 
 
 ```{r bmi06}
-bmsgpk_file_to_download <- 
+bmsgpk_file_to_download <-
   "timeline-faelle-bundeslaender.csv"
 ```
 
@@ -56,26 +49,32 @@ create_dir_if_needed(local_download_data_dir)
 
 ```{r bmi08}
 suppressMessages(
-download.file(file.path(
-  bmsgpk_download_dir,bmsgpk_file_to_download),
-  file.path(local_bmsgpk_data_dir,bmsgpk_file_to_download)
-)
+  download.file(
+    path(
+      bmsgpk_download_url, bmsgpk_file_to_download
+    ),
+    path(local_download_data_dir, bmsgpk_file_to_download)
+  )
 )
 ```
 ```{r bmi09, message=FALSE}
 suppressMessages({
-read_csv2(file.path(local_bmsgpk_data_dir,
-                    bmsgpk_file_to_download)) |>
-  mutate(Datum=Datum |> as.Date()) |>
-  rename(Bundesland=Name,
-         cases_BMI = BestaetigteFaelleBundeslaender,
-         Tot_BMI = Todesfaelle,
-         Genesen_BMI = Genesen,
-         Hospital_BMI = Hospitalisierung,
-         Intensiv_BMI=Intensivstation,
-         Tests_alle_BMI=Testungen,
-         Tests_PCR_BMI = TestungenPCR,
-         Tests_AG_BMI = TestungenAntigen) ->
+  read_csv2(path(
+    local_download_data_dir,
+    bmsgpk_file_to_download
+  )) |>
+    mutate(Datum = Datum |> as.Date()) |>
+    rename(
+      Bundesland = Name,
+      cases_BMI = BestaetigteFaelleBundeslaender,
+      Tot_BMI = Todesfaelle,
+      Genesen_BMI = Genesen,
+      Hospital_BMI = Hospitalisierung,
+      Intensiv_BMI = Intensivstation,
+      Tests_alle_BMI = Testungen,
+      Tests_PCR_BMI = TestungenPCR,
+      Tests_AG_BMI = TestungenAntigen
+    ) ->
   cases_bmi
 })
 ```
@@ -83,53 +82,59 @@ read_csv2(file.path(local_bmsgpk_data_dir,
 
 
 ```{r bmi10}
-load(path(here(),"data_base",
-          "ems_bmi_ages_upto_20210228.RData"))
+load(path(
+  here(), "data_base",
+  "ems_bmi_ages_upto_20210228.RData"
+))
 ```
 
 
 ```{r bmi11}
 ems_bmi_ages_upto_20210228 |>
   select(-pop) |>
-  select(Datum,BundeslandID,Bundesland,ends_with("BMI")) |>
+  select(Datum, BundeslandID, Bundesland, ends_with("BMI")) |>
   select(-Datum_BMI) |>
   bind_rows(
     cases_bmi
   ) ->
-  cases_bmi
+cases_bmi
 ```
 
 ```{r bmi12}
-load(path(here(),"data_base",
-          "pop_bl_quarterly.RData")) 
+load(path(
+  here(), "data_base",
+  "pop_bl_quarterly.RData"
+))
 pop_bl_quarterly |>
-  filter(Datum==max(Datum)) |>
-  select(BundeslandID,Bundesland,pop) ->
-  pop_bl_latest
+  filter(Datum == max(Datum)) |>
+  select(BundeslandID, Bundesland, pop) ->
+pop_bl_latest
 ```
 
 ```{r bmi13}
-create_dir_if_needed(path(here(),"data","rdata_preliminary"))
+create_dir_if_needed(rdata_prelim_dir)
 ```
 
 ```{r bmi14}
 cases_bmi |>
   left_join(pop_bl_latest) ->
-  cases_bmi
+cases_bmi
 ```
 
 
 ```{r bmi15}
 save(cases_bmi,
-     file=path(here(),"data","rdata_preliminary",
-               "cases_bmi.RData"))
+  file = path(
+    here(), "data", "rdata_preliminary",
+    "cases_bmi.RData"
+  )
+)
 ```
 
 ```{r}
-if(!keep_download_data){
-  file_delete(
-   file.path(local_bmsgpk_data_dir,bmsgpk_file_to_download) 
+if (!keep_download_data) {
+  safe_file_delete(
+    path(local_download_data_dir, bmsgpk_file_to_download)
   )
 }
 ```
-
